@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Library System</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#0f0f0f;
+color:#f5d76e;
+text-align:center;
+margin:0;
+}
+
+h1{
+color:#f5d76e;
+margin-top:20px;
+}
+
+button{
+padding:10px;
+margin:5px;
+background:#c9a227;
+color:black;
+border:none;
+border-radius:6px;
+cursor:pointer;
+font-weight:bold;
+}
+
+button:hover{
+background:#e6c55c;
+}
+
+input{
+padding:10px;
+margin:5px;
+background:#1c1c1c;
+border:1px solid #c9a227;
+color:#f5d76e;
+border-radius:5px;
+}
+
+table{
+margin:20px auto;
+border-collapse:collapse;
+width:85%;
+background:#1c1c1c;
+color:#f5d76e;
+border-radius:8px;
+overflow:hidden;
+}
+
+th, td{
+padding:12px;
+border:1px solid #333;
+}
+
+th{
+background:#c9a227;
+color:black;
+}
+
+tr:hover{
+background:#2a2a2a;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>📚 Library Management System</h1>
+
+<button onclick="loadBooks()">Load Books</button>
+<button onclick="loadIssued()">Issued Books</button>
+
+<br><br>
+
+<input id="searchInput" placeholder="Search book">
+<button onclick="searchBook()">Search</button>
+
+<br><br>
+
+<input id="title" placeholder="Title">
+<input id="author" placeholder="Author">
+<input id="genre" placeholder="Genre">
+<input id="copies" placeholder="Copies">
+<button onclick="addBook()">Add Book</button>
+
+<table id="table"></table>
+
+<script>
+
+const API = "http://127.0.0.1:5000";
+
+/* AFTER RENDER DEPLOY CHANGE TO:
+const API = "https://your-app-name.onrender.com";
+*/
+
+if(!localStorage.getItem("user_id")){
+alert("Login first");
+window.location.href="login.html";
+}
+
+function loadBooks(){
+fetch(`${API}/books`)
+.then(res=>res.json())
+.then(data=>{
+
+let t=document.getElementById("table");
+
+t.innerHTML=`
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Author</th>
+<th>Genre</th>
+<th>Action</th>
+</tr>
+`;
+
+data.forEach(b=>{
+t.innerHTML+=`
+<tr>
+<td>${b.book_id}</td>
+<td>${b.title}</td>
+<td>${b.author}</td>
+<td>${b.genre || ""}</td>
+<td>
+<button onclick="deleteBook(${b.book_id})">Delete</button>
+<button onclick="issueBook(${b.book_id})">Issue</button>
+</td>
+</tr>
+`;
+});
+
+});
+}
+
+function addBook(){
+
+fetch(`${API}/add_book`,{
+method:"POST",
+headers:{
+'Content-Type':'application/json'
+},
+body:JSON.stringify({
+title:title.value,
+author:author.value,
+genre:genre.value,
+copies:copies.value
+})
+})
+.then(res=>res.json())
+.then(d=>{
+alert(d.message);
+loadBooks();
+});
+
+}
+
+function deleteBook(id){
+
+fetch(`${API}/delete_book/${id}`,{
+method:"DELETE"
+})
+.then(()=>loadBooks());
+
+}
+
+function searchBook(){
+
+let val=searchInput.value;
+
+fetch(`${API}/search/${val}`)
+.then(res=>res.json())
+.then(data=>{
+
+let t=document.getElementById("table");
+
+t.innerHTML=`
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Author</th>
+<th>Genre</th>
+<th>Action</th>
+</tr>
+`;
+
+data.forEach(b=>{
+t.innerHTML+=`
+<tr>
+<td>${b.book_id}</td>
+<td>${b.title}</td>
+<td>${b.author}</td>
+<td>${b.genre || ""}</td>
+<td>
+<button onclick="deleteBook(${b.book_id})">Delete</button>
+<button onclick="issueBook(${b.book_id})">Issue</button>
+</td>
+</tr>
+`;
+});
+
+});
+
+}
+
+function issueBook(id){
+
+let user_id = localStorage.getItem("user_id");
+
+if(!user_id){
+alert("Login first");
+return;
+}
+
+fetch(`${API}/issue`,{
+method:"POST",
+headers:{
+'Content-Type':'application/json'
+},
+body:JSON.stringify({
+user_id: parseInt(user_id),
+book_id: parseInt(id)
+})
+})
+.then(res=>res.json())
+.then(d=>{
+alert(d.message);
+loadIssued();
+})
+.catch(()=>{
+alert("Issue failed");
+});
+
+}
+
+function loadIssued(){
+
+fetch(`${API}/issued`)
+.then(res=>res.json())
+.then(data=>{
+
+let t=document.getElementById("table");
+
+t.innerHTML=`
+<tr>
+<th>ID</th>
+<th>User</th>
+<th>Book</th>
+<th>Action</th>
+</tr>
+`;
+
+if(data.length===0){
+t.innerHTML+=`
+<tr>
+<td colspan="4">No issued books</td>
+</tr>
+`;
+return;
+}
+
+data.forEach(i=>{
+t.innerHTML+=`
+<tr>
+<td>${i.issue_id}</td>
+<td>${i.name}</td>
+<td>${i.title}</td>
+<td>
+<button onclick="returnBook(${i.issue_id})">Return</button>
+</td>
+</tr>
+`;
+});
+
+});
+
+}
+
+function returnBook(id){
+
+fetch(`${API}/return/${id}`,{
+method:"PUT"
+})
+.then(()=>loadIssued());
+
+}
+
+loadBooks();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Signup</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:#0f0f0f;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+color:#f5d76e;
+}
+
+.card{
+background:#1c1c1c;
+padding:30px;
+border-radius:12px;
+width:320px;
+text-align:center;
+box-shadow:0 0 15px rgba(201,162,39,0.4);
+}
+
+h2{
+color:#f5d76e;
+}
+
+input{
+width:100%;
+padding:10px;
+margin:10px 0;
+border:1px solid #c9a227;
+border-radius:5px;
+background:#0f0f0f;
+color:#f5d76e;
+box-sizing:border-box;
+}
+
+input::placeholder{
+color:#aaa;
+}
+
+button{
+width:100%;
+padding:10px;
+background:#c9a227;
+color:black;
+border:none;
+border-radius:5px;
+cursor:pointer;
+font-weight:bold;
+}
+
+button:hover{
+background:#e6c55c;
+}
+
+p{
+margin-top:15px;
+color:#ccc;
+}
+
+a{
+color:#f5d76e;
+text-decoration:none;
+font-weight:bold;
+}
+
+a:hover{
+text-decoration:underline;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>Create Account</h2>
+
+<input id="name" placeholder="Name">
+<input id="email" type="email" placeholder="Email">
+<input id="pass" type="password" placeholder="Password">
+<input id="cpass" type="password" placeholder="Confirm Password">
+
+<button onclick="signup()">Create Account</button>
+
+<p>Already have an account? <a href="login.html">Login</a></p>
+
+</div>
+
+<script>
+
+const API = "http://127.0.0.1:5000";
+
+/* AFTER DEPLOY CHANGE TO:
+const API = "https://your-render-app.onrender.com";
+*/
+
+function signup(){
+
+let name  = document.getElementById("name").value.trim();
+let email = document.getElementById("email").value.trim();
+let pass  = document.getElementById("pass").value.trim();
+let cpass = document.getElementById("cpass").value.trim();
+
+if(name=="" || email=="" || pass=="" || cpass==""){
+alert("Please fill all fields");
+return;
+}
+
+if(pass !== cpass){
+alert("Passwords do not match");
+return;
+}
+
+fetch(`${API}/signup`,{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+name:name,
+email:email,
+password:pass
+})
+})
+.then(res=>res.json())
+.then(data=>{
+
+if(data.message=="created"){
+alert("Account created successfully");
+window.location.href="login.html";
+}
+else if(data.message=="exists"){
+alert("Email already exists");
+}
+else{
+alert("Signup failed");
+}
+
+})
+.catch(()=>{
+alert("Server error");
+});
+
+}
+
+</script>
+
+</body>
+</html>
