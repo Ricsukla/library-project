@@ -1,7 +1,7 @@
-import mysql.connector
+iimport mysql.connector
 import sqlite3
 
-# MYSQL
+# ---------------- MYSQL ----------------
 mysql_db = mysql.connector.connect(
     host="localhost",
     user="root",
@@ -9,13 +9,14 @@ mysql_db = mysql.connector.connect(
     database="library_db1",
     port=3307
 )
+
 mysql_cursor = mysql_db.cursor(dictionary=True)
 
-# SQLITE
+# ---------------- SQLITE ----------------
 sqlite_db = sqlite3.connect("library.db")
 cursor = sqlite_db.cursor()
 
-# CREATE TABLES FIRST
+# ---------------- CREATE TABLES ----------------
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,48 +49,64 @@ CREATE TABLE IF NOT EXISTS issues (
 )
 """)
 
-# USERS
+# ---------------- USERS ----------------
 mysql_cursor.execute("SELECT * FROM users")
 for u in mysql_cursor.fetchall():
-    cursor.execute(
-        "INSERT INTO users(name,email,password) VALUES (?,?,?)",
-        (u["name"], u["email"], u["password"])
-    )
+    try:
+        cursor.execute(
+            "INSERT OR IGNORE INTO users(name,email,password) VALUES (?,?,?)",
+            (u["name"], u["email"], u["password"])
+        )
+    except Exception as e:
+        print("User skip:", e)
 
-print("Users migrated")
+print("✅ Users migrated")
 
-# BOOKS
+# ---------------- BOOKS ----------------
 mysql_cursor.execute("SELECT * FROM books")
 for b in mysql_cursor.fetchall():
-    cursor.execute("""
-    INSERT INTO books(title,author,category,total_copies,available_copies)
-    VALUES (?,?,?,?,?)
-    """, (
-        b["title"],
-        b["author"],
-        b["category"],
-        b["total_copies"],
-        b["available_copies"]
-    ))
+    try:
+        cursor.execute("""
+        INSERT OR IGNORE INTO books(title,author,category,total_copies,available_copies)
+        VALUES (?,?,?,?,?)
+        """, (
+            b["title"],
+            b["author"],
+            b["category"],
+            b["total_copies"],
+            b["available_copies"]
+        ))
+    except Exception as e:
+        print("Book skip:", e)
 
-print("Books migrated")
+print("✅ Books migrated")
 
-# ISSUES
+# ---------------- ISSUES ----------------
 mysql_cursor.execute("SELECT * FROM issues")
 for i in mysql_cursor.fetchall():
-    cursor.execute("""
-    INSERT INTO issues(student_id,book_id,student_name,book_title,issue_date,status)
-    VALUES (?,?,?,?,?,?)
-    """, (
-        i["student_id"],
-        i["book_id"],
-        i["student_name"],
-        i["book_title"],
-        i["issue_date"],
-        i["status"]
-    ))
+    try:
+        cursor.execute("""
+        INSERT OR IGNORE INTO issues(student_id,book_id,student_name,book_title,issue_date,status)
+        VALUES (?,?,?,?,?,?)
+        """, (
+            i["student_id"],
+            i["book_id"],
+            i["student_name"],
+            i["book_title"],
+            i["issue_date"],
+            i["status"]
+        ))
+    except Exception as e:
+        print("Issue skip:", e)
 
-print("Issues migrated")
+print("✅ Issues migrated")
 
+# ---------------- SAVE ----------------
 sqlite_db.commit()
-print("✅ MIGRATION COMPLETE")
+
+# ---------------- CLOSE ----------------
+mysql_cursor.close()
+mysql_db.close()
+sqlite_db.close()
+
+print("🎉 MIGRATION COMPLETE")
