@@ -1,19 +1,16 @@
 from flask_cors import CORS
 from flask import Flask, request, jsonify
 import sqlite3
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-
 # ---------------- DATABASE ----------------
-
 DB_PATH = os.path.join(os.getcwd(), "library.db")
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -63,17 +60,17 @@ def create_tables():
 
 create_tables()
 
-
 # ---------------- LOGIN ----------------
 @app.route('/login', methods=['POST'])
 def login():
-    d = request.json
+    d = request.json or {}
+
     conn = get_db()
     cursor = conn.cursor()
 
     cursor.execute(
         "SELECT user_id, name FROM users WHERE email=? AND password=?",
-        (d['email'], d['password'])
+        (d.get('email'), d.get('password'))
     )
 
     user = cursor.fetchone()
@@ -94,13 +91,14 @@ def login():
 # ---------------- SIGNUP ----------------
 @app.route('/signup', methods=['POST'])
 def signup():
-    d = request.json
+    d = request.json or {}
+
     conn = get_db()
     cursor = conn.cursor()
 
     cursor.execute(
         "SELECT * FROM users WHERE email=?",
-        (d['email'],)
+        (d.get('email'),)
     )
 
     if cursor.fetchone():
@@ -109,7 +107,7 @@ def signup():
 
     cursor.execute(
         "INSERT INTO users(name,email,password) VALUES (?,?,?)",
-        (d['name'], d['email'], d['password'])
+        (d.get('name'), d.get('email'), d.get('password'))
     )
 
     conn.commit()
@@ -138,19 +136,22 @@ def books():
 # ---------------- ADD BOOK ----------------
 @app.route('/add_book', methods=['POST'])
 def add_book():
-    d = request.json
+    d = request.json or {}
+
     conn = get_db()
     cursor = conn.cursor()
 
     copies = int(d.get('copies', 1))
+    if copies < 1:
+        return {"message": "Invalid copies"}
 
     cursor.execute("""
     INSERT INTO books(title,author,category,total_copies,available_copies)
     VALUES (?,?,?,?,?)
     """, (
-        d['title'],
-        d['author'],
-        d['genre'],
+        d.get('title'),
+        d.get('author'),
+        d.get('genre'),
         copies,
         copies
     ))
@@ -167,10 +168,7 @@ def delete(id):
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "DELETE FROM books WHERE book_id=?",
-        (id,)
-    )
+    cursor.execute("DELETE FROM books WHERE book_id=?", (id,))
 
     conn.commit()
     conn.close()
@@ -199,19 +197,19 @@ def search(name):
 # ---------------- ISSUE BOOK ----------------
 @app.route('/issue', methods=['POST'])
 def issue():
-    d = request.json
+    d = request.json or {}
+
     conn = get_db()
     cursor = conn.cursor()
 
     try:
-        user_id = int(d['user_id'])
-        book_id = int(d['book_id'])
+        user_id = int(d.get('user_id'))
+        book_id = int(d.get('book_id'))
 
         cursor.execute(
             "SELECT title, available_copies FROM books WHERE book_id=?",
             (book_id,)
         )
-
         book = cursor.fetchone()
 
         if not book:
@@ -226,7 +224,6 @@ def issue():
             "SELECT name FROM users WHERE user_id=?",
             (user_id,)
         )
-
         user = cursor.fetchone()
 
         if not user:
@@ -294,10 +291,7 @@ def ret(id):
     book = cursor.fetchone()
 
     if book:
-        cursor.execute(
-            "DELETE FROM issues WHERE issue_id=?",
-            (id,)
-        )
+        cursor.execute("DELETE FROM issues WHERE issue_id=?", (id,))
 
         cursor.execute("""
         UPDATE books
@@ -310,6 +304,9 @@ def ret(id):
     conn.close()
 
     return {"message": "returned"}
+
+
+# ---------------- CHECK ----------------
 @app.route("/check")
 def check():
     conn = get_db()
@@ -318,7 +315,6 @@ def check():
     return str(cursor.fetchone())
 
 
-import os
-
+# ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
